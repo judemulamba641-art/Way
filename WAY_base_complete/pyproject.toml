@@ -1,0 +1,295 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+# ============================================================
+# PROJECT
+# ============================================================
+
+[project]
+name = "way-backend"
+version = "2.4.0"
+description = "WAY distributed backend platform"
+readme = "README.md"
+requires-python = ">=3.12"
+
+authors = [
+    { name = "WAY backend team" }
+]
+
+license = { text = "Private / Proprietary" }
+
+keywords = [
+    "django",
+    "drf",
+    "channels",
+    "celery",
+    "kafka",
+    "redis",
+    "postgresql",
+    "minio",
+    "websocket"
+]
+
+dependencies = [
+
+    # ========================================================
+    # DJANGO CORE
+    # ========================================================
+
+    "Django==5.1.8",
+    "djangorestframework==3.15.2",
+    "django-filter==24.3",
+    "django-cors-headers==4.6.0",
+    "django-environ==0.11.2",
+    "django-extensions==3.2.3",
+
+    # ========================================================
+    # AUTH / SECURITY
+    # ========================================================
+
+    "djangorestframework-simplejwt==5.5.0",
+    "cryptography==44.0.2",
+    "PyJWT==2.10.1",
+    "argon2-cffi==23.1.0",
+    "bcrypt==4.2.1",
+
+    # ========================================================
+    # CHANNELS
+    # ========================================================
+
+    "channels==4.2.0",
+    "channels-redis==4.2.1",
+    "daphne==4.1.2",
+
+    # ========================================================
+    # CELERY
+    # ========================================================
+
+    "celery==5.5.1",
+    "redis==5.2.1",
+    "flower==2.0.1",
+
+    # ========================================================
+    # DATABASE
+    # ========================================================
+
+    "psycopg[binary]==3.2.6",
+
+    # ========================================================
+    # KAFKA
+    # ========================================================
+
+    "kafka-python==2.0.2",
+
+    # ========================================================
+    # STORAGE
+    # ========================================================
+
+    "boto3==1.37.23",
+    "minio==7.2.15",
+
+    # ========================================================
+    # HTTP
+    # ========================================================
+
+    "httpx==0.28.1",
+    "requests==2.32.3",
+    "tenacity==9.0.0",
+
+    # ========================================================
+    # VALIDATION
+    # ========================================================
+
+    "pydantic==2.11.3",
+    "pydantic-settings==2.8.1",
+
+    # ========================================================
+    # OBSERVABILITY
+    # ========================================================
+
+    "sentry-sdk==2.25.1",
+    "prometheus-client==0.21.1",
+
+    "opentelemetry-api==1.32.1",
+    "opentelemetry-sdk==1.32.1",
+    "opentelemetry-instrumentation==0.53b1",
+
+    "structlog==25.2.0",
+
+    # ========================================================
+    # UTILS
+    # ========================================================
+
+    "python-dateutil==2.9.0.post0",
+    "orjson==3.10.16",
+    "lz4==4.4.3",
+    "uuid6==2024.7.10"
+]
+
+# ============================================================
+# OPTIONAL DEPENDENCIES
+# ============================================================
+
+[project.optional-dependencies]
+
+dev = [
+
+    "ipython==9.0.2",
+
+    "watchfiles==1.0.5",
+
+    "pre-commit==4.2.0",
+
+    "django-debug-toolbar==5.1.0"
+]
+
+test = [
+
+    "pytest==8.3.5",
+    "pytest-django==4.10.0",
+    "pytest-asyncio==0.25.3",
+    "pytest-cov==6.0.0",
+
+    "factory-boy==3.3.3",
+
+    "faker==37.1.0"
+]
+
+prod = [
+
+    "gunicorn==23.0.0",
+    "uvicorn==0.34.0"
+]
+
+# ============================================================
+# SETUPTOOLS
+# ============================================================
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["apps*", "services*", "config*"]
+
+# ============================================================
+# PYTEST
+# ============================================================
+
+[tool.pytest.ini_options]
+
+DJANGO_SETTINGS_MODULE = "config.settings"
+
+python_files = [
+    "tests.py",
+    "test_*.py",
+    "*_tests.py"
+]
+
+addopts = """
+-ra
+-q
+--strict-markers
+--tb=short
+"""
+
+testpaths = [
+    "tests",
+    "apps"
+]
+
+# ============================================================
+# RUFF
+# ============================================================
+
+[tool.ruff]
+
+line-length = 100
+target-version = "py312"
+
+exclude = [
+    ".venv",
+    "migrations",
+    "dist",
+    "build"
+]
+
+[tool.ruff.lint]
+
+select = [
+    "E",
+    "F",
+    "I",
+    "UP",
+    "B"
+]
+
+ignore = [
+    "E501"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+# ============================================================
+# MYPY
+# ============================================================
+
+[tool.mypy]
+
+python_version = "3.12"
+
+warn_return_any = true
+warn_unused_configs = true
+
+disallow_untyped_defs = false
+
+ignore_missing_imports = true
+
+plugins = []
+
+exclude = [
+    "migrations/"
+]
+
+# ============================================================
+# COVERAGE
+# ============================================================
+
+[tool.coverage.run]
+
+branch = true
+
+source = [
+    "apps",
+    "services"
+]
+
+omit = [
+    "*/migrations/*",
+    "*/tests/*"
+]
+
+# ============================================================
+# DJANGO DEBUG TOOLBAR
+# ============================================================
+
+[tool.djlint]
+
+profile = "django"
+
+# ============================================================
+# CLI SCRIPTS
+# ============================================================
+
+[project.scripts]
+
+way-manage = "manage:main"
+
+# ============================================================
+# URLs
+# ============================================================
+
+[project.urls]
+
+Homepage = "https://way.local"
+Repository = "https://github.com/your-org/way-backend"
+Documentation = "https://way.local/docs"

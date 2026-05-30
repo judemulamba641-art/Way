@@ -1,0 +1,11 @@
+# This file indicates that the package supports PEP 561 typing.
+
+# WAY Python SDK
+# Enterprise-grade typed Python SDK
+
+# Presence of this file means:
+# - Type checkers should treat this package as typed
+# - Inline type hints are available and authoritative
+# - No need to look for external stubs (*.pyi)
+
+# Do not remove this file unless you intentionally want to disable type checking support.

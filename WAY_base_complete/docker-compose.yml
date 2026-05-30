@@ -1,0 +1,334 @@
+version: "3.9"
+
+# ============================================================
+# WAY BACKEND STACK
+# ============================================================
+
+name: way
+
+services:
+
+  # ==========================================================
+  # DJANGO API
+  # ==========================================================
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: way-backend
+
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      daphne -b 0.0.0.0 -p 8000 config.asgi:application
+      "
+
+    env_file:
+      - .env
+
+    volumes:
+      - .:/app
+
+    ports:
+      - "8000:8000"
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_healthy
+
+      kafka:
+        condition: service_started
+
+      minio:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # CELERY WORKER
+  # ==========================================================
+
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: celery -A config worker -l info
+
+    env_file:
+      - .env
+
+    volumes:
+      - .:/app
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+      postgres:
+        condition: service_healthy
+
+      kafka:
+        condition: service_started
+
+    restart: unless-stopped
+
+    deploy:
+      replicas: 2
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # CELERY BEAT
+  # ==========================================================
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: celery -A config beat -l info
+
+    env_file:
+      - .env
+
+    volumes:
+      - .:/app
+
+    depends_on:
+      redis:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # FLOWER
+  # ==========================================================
+
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    command: flower
+
+    env_file:
+      - .env
+
+    ports:
+      - "5555:5555"
+
+    depends_on:
+      - celery-worker
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # POSTGRESQL
+  # ==========================================================
+
+  postgres:
+    image: postgres:16-alpine
+
+    container_name: way-postgres
+
+    environment:
+      POSTGRES_DB: way
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d way"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # REDIS
+  # ==========================================================
+
+  redis:
+    image: redis:7-alpine
+
+    container_name: way-redis
+
+    ports:
+      - "6379:6379"
+
+    volumes:
+      - redis_data:/data
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # ZOOKEEPER
+  # ==========================================================
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+
+    ports:
+      - "2181:2181"
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # KAFKA
+  # ==========================================================
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+
+    depends_on:
+      - zookeeper
+
+    ports:
+      - "9092:9092"
+
+    environment:
+      KAFKA_BROKER_ID: 1
+
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # MINIO
+  # ==========================================================
+
+  minio:
+    image: minio/minio
+
+    command: server /data --console-address ":9001"
+
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio123
+
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
+    volumes:
+      - minio_data:/data
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # PROMETHEUS
+  # ==========================================================
+
+  prometheus:
+    image: prom/prometheus
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./infra/prometheus:/etc/prometheus
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+  # ==========================================================
+  # GRAFANA
+  # ==========================================================
+
+  grafana:
+    image: grafana/grafana
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+    depends_on:
+      - prometheus
+
+    restart: unless-stopped
+
+    networks:
+      - way-network
+
+# ============================================================
+# NETWORKS
+# ============================================================
+
+networks:
+  way-network:
+    driver: bridge
+
+# ============================================================
+# VOLUMES
+# ============================================================
+
+volumes:
+
+  postgres_data:
+
+  redis_data:
+
+  minio_data:
+
+  grafana_data:
